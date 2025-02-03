@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script th:inline="javascript">
+        let countdown = 3;
+        function startCountdown() {
+            setInterval(function() {
+                if (countdown > 0) {
+                    document.getElementById("countdown").innerText = countdown;
+                    countdown--;
+                } else {
+                    const confirmationUrl = /*[[${confirmationUrl}]]*/ '';
+                    window.location.href = confirmationUrl;
+                }
+            }, 1000);
+        }
+        window.onload = startCountdown;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Redirecting in <span id="countdown">3</span> seconds...</h1>
+        <p>If you are not redirected, click 
+            <a th:href="${confirmationUrl}">here</a>.
+        </p>
+    </div>
+    
+    <p>Status: <span th:text="${status}"></span></p>
+    <p>Transaction merchant reference id: <span th:text="${transactionId}"></span></p>
+
+</body>
+</html>
