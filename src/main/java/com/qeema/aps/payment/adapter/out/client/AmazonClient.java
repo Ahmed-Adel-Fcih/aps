@@ -1,16 +1,15 @@
 package com.qeema.aps.payment.adapter.out.client;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.qeema.aps.common.utils.AmazonConstants;
 import com.qeema.aps.common.utils.AmazonUtils;
@@ -32,7 +31,7 @@ public class AmazonClient implements AmazonPaymentServiceClient {
     private static final String REFUND_API_URL = "https://sbpaymentservices.payfort.com/FortAPI/paymentApi";
 
     @Autowired
-    private RestTemplate restTemplate;
+    private WebClient webClient;
 
     @Override
     public PurchaseResponse callPurchaseAPI(Payment payment, String token) {
@@ -44,12 +43,16 @@ public class AmazonClient implements AmazonPaymentServiceClient {
         purchaseRequest.setSignature(signature);
         payment.setRequest(purchaseRequest.toString());
         try {
-            response = restTemplate.postForObject(PURCHASE_API_URL, purchaseRequest,
-                    PurchaseResponse.class);
-        } catch (RestClientException e) {
-            log.error(e.getMessage(), e);
+            response = webClient.post()
+                    .uri(PURCHASE_API_URL)
+                    .body(BodyInserters.fromValue(purchaseRequest))
+                    .retrieve()
+                    .bodyToMono(PurchaseResponse.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error response from purchase API: {}", e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Error invoking purchase API", e);
         }
         return response;
     }
@@ -58,11 +61,16 @@ public class AmazonClient implements AmazonPaymentServiceClient {
     public RefundResponse callRefundAPI(RefundRequest refundRequest) {
         RefundResponse response = new RefundResponse();
         try {
-            response = restTemplate.postForObject(REFUND_API_URL, refundRequest, RefundResponse.class);
-        } catch (RestClientException e) {
-            log.error(e.getMessage(), e);
+            response = webClient.post()
+                    .uri(REFUND_API_URL)
+                    .body(BodyInserters.fromValue(refundRequest))
+                    .retrieve()
+                    .bodyToMono(RefundResponse.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error response from refund API: {}", e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Error invoking refund API", e);
         }
         return response;
     }
@@ -73,19 +81,15 @@ public class AmazonClient implements AmazonPaymentServiceClient {
         params.put("merchant_identifier", AmazonConstants.MERCHANT_IDENTIFIER);
         params.put("command", command.getName());
         params.put("language", AmazonConstants.LANGUAGE);
-        // params.put("return_url", AmazonConstants.RETURN_URL_PURCHASE);
         params.put("merchant_reference", merchant_reference);
         Set<String> excludedFields = new HashSet<>();
         excludedFields.add("access_code");
         excludedFields.add("merchant_identifier");
         excludedFields.add("command");
         excludedFields.add("language");
-        // excludedFields.add("return_url");
         excludedFields.add("merchant_reference");
         excludedFields.add("signature");
         AmazonUtils.addToMapIfNotNull(params, request, excludedFields);
-        String signature = AmazonUtils.generateSignature(params);
-        return signature;
+        return AmazonUtils.generateSignature(params);
     }
-
 }
