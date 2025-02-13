@@ -13,7 +13,8 @@
                     countdown--;
                 } else {
                     const confirmationUrl = /*[[${confirmationUrl}]]*/ '';
-                    window.location.href = confirmationUrl;
+                    const status = /*[[${status}]]*/ '';
+                    window.location.href = confirmationUrl+"?status="+status;
                 }
             }, 1000);
         }

@@ -7,10 +7,14 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.qeema.aps.card.adapter.out.persistance.CardRepository;
+import com.qeema.aps.card.application.port.in.ReadCardUseCase;
 import com.qeema.aps.card.domain.Card;
 import com.qeema.aps.common.utils.ServiceCommand;
 import com.qeema.aps.customer.adapter.out.persistance.CustomerRepository;
+import com.qeema.aps.customer.application.port.in.ReadCustomerCardUseCase;
+import com.qeema.aps.customer.application.port.in.ReadCustomerUseCase;
 import com.qeema.aps.customer.domain.Customer;
+import com.qeema.aps.payment.adapter.out.client.ClientFactory;
 import com.qeema.aps.payment.adapter.out.persistance.PaymentRepository;
 import com.qeema.aps.payment.application.port.out.AmazonPaymentServiceClient;
 import com.qeema.aps.payment.application.port.out.FulfillPaymentPort;
@@ -30,26 +34,31 @@ public class PaymentAdapter implements FulfillPaymentPort, SavePaymentPort {
 
     @Autowired
     @Qualifier("AmazonClient")
-    AmazonPaymentServiceClient amazonPaymentServiceClient;
-
+    private AmazonPaymentServiceClient amazonClient;
     @Autowired
     @Qualifier("WSO2Client")
-    AmazonPaymentServiceClient amazonPaymentServiceClient_WSO2;
+    private AmazonPaymentServiceClient wso2Client;
+    private final PaymentRepository paymentRepository;
+    private final ReadCardUseCase readCardUseCase;
+    private final ReadCustomerUseCase readCustomerUseCase;
+    @Autowired
+    ReadCustomerCardUseCase readCustomerCardUseCase;
 
     @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
-    private CardRepository cardRepository;
-    @Autowired
-    private CustomerRepository customerRepository;
-    @Autowired
-    private RestTemplate restTemplate;
-
-    private static final String REFUND_API_URL = "https://api.example.com/refund";
+    public PaymentAdapter(
+            PaymentRepository paymentRepository,
+            ReadCardUseCase readCardUseCase,
+            ReadCustomerUseCase readCustomerUseCase) {
+        this.paymentRepository = paymentRepository;
+        this.readCardUseCase = readCardUseCase;
+        this.readCustomerUseCase = readCustomerUseCase;
+    }
 
     @Override
     public Payment fulfillPayment(Payment payment) {
-        PurchaseResponse response = amazonPaymentServiceClient_WSO2.callPurchaseAPI(payment);
+        String tokenName = readCustomerCardUseCase.getTokenByCustomerIdAndCardId(payment.getCustomer().getId(),
+                payment.getCard().getId());
+        PurchaseResponse response = wso2Client.callPurchaseAPI(payment, tokenName);
         payment.setPaymentStatus(PaymentStatus.PURCHASED.getName());
         payment.setResponse(response.toString());
         payment.setPaymentOption(response.getPayment_option());
@@ -74,9 +83,9 @@ public class PaymentAdapter implements FulfillPaymentPort, SavePaymentPort {
             Integer customerId) {
 
         Payment payment = new Payment();
-        Card card = cardRepository.findById(request.getCardId()).orElse(null);
+        Card card = readCardUseCase.getCard(request.getCardId());
         payment.setCard(card);
-        Customer customer = customerRepository.findById(customerId).orElse(null);
+        Customer customer = readCustomerUseCase.getCustomer(customerId);
         payment.setCustomer(customer);
         payment.setServiceCommand(ServiceCommand.Tokenization.getName());
         payment.setMerchant_reference(merchant_reference);
@@ -86,7 +95,7 @@ public class PaymentAdapter implements FulfillPaymentPort, SavePaymentPort {
 
     @Override
     public RefundResponse callRefundAPI(RefundRequest refundRequest) {
-        return amazonPaymentServiceClient.callRefundAPI(refundRequest);
+        return amazonClient.callRefundAPI(refundRequest);
     }
 
 }

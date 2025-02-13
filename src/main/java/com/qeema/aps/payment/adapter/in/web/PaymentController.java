@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.qeema.aps.payment.application.port.in.PreparePaymentUseCase;
 import com.qeema.aps.payment.application.port.in.ProcessPaymentUseCase;
+import com.qeema.aps.payment.application.port.in.ProcessRefundUseCase;
 import com.qeema.aps.payment.application.port.in.ReadPaymentUseCase;
 import com.qeema.aps.payment.domain.Payment;
 import com.qeema.aps.payment.domain.PaymentRequest;
@@ -31,6 +32,9 @@ public class PaymentController {
 
     @Autowired
     private PreparePaymentUseCase preparePaymentUseCase;
+
+    @Autowired
+    private ProcessRefundUseCase processRefundUseCase;
 
     @GetMapping("/{id}")
     public ResponseEntity<Payment> getPaymentById(@PathVariable Integer id) {
@@ -63,7 +67,7 @@ public class PaymentController {
     @PostMapping("/refund")
     public ResponseEntity<RefundResponse> refundPayment(@RequestHeader Integer customerId,
             @RequestBody String merchantReference) {
-        RefundResponse response = processPaymentUseCase.refundPayment(merchantReference, customerId);
+        RefundResponse response = processRefundUseCase.refundPayment(merchantReference, customerId);
         return ResponseEntity.ok(response);
     }
 }

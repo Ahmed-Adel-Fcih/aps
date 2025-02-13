@@ -2,8 +2,6 @@ package com.qeema.aps.customer.adapter.out;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.qeema.aps.card.adapter.out.persistance.CardRepository;
 import com.qeema.aps.card.application.port.in.AddCardUseCase;
 import com.qeema.aps.card.domain.Card;
 import com.qeema.aps.customer.adapter.out.persistance.CustomerCardRepository;
@@ -25,8 +23,6 @@ public class CustomerCardAdapter implements AddCustomerCardUseCase {
 
     @Autowired
     private ReadPaymentUseCase readPaymentUseCase;
-    @Autowired
-    CardRepository cardRepository;
     @Autowired
     CustomerRepository customerRepository;
     @Autowired

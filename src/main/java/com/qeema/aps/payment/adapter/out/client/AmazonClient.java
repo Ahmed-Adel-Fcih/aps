@@ -15,9 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import com.qeema.aps.common.utils.AmazonConstants;
 import com.qeema.aps.common.utils.AmazonUtils;
 import com.qeema.aps.common.utils.ServiceCommand;
-import com.qeema.aps.customer.application.port.in.ReadCustomerCardUseCase;
 import com.qeema.aps.payment.application.port.out.AmazonPaymentServiceClient;
-import com.qeema.aps.payment.application.service.PaymentStatus;
 import com.qeema.aps.payment.domain.Payment;
 import com.qeema.aps.payment.domain.dto.PurchaseRequest;
 import com.qeema.aps.payment.domain.dto.PurchaseResponse;
@@ -36,17 +34,12 @@ public class AmazonClient implements AmazonPaymentServiceClient {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Autowired
-    ReadCustomerCardUseCase readCustomerCardUseCase;
-
     @Override
-    public PurchaseResponse callPurchaseAPI(Payment payment) {
+    public PurchaseResponse callPurchaseAPI(Payment payment, String token) {
         // Call the purchase API
         PurchaseResponse response = new PurchaseResponse();
         PurchaseRequest purchaseRequest = new PurchaseRequest(payment);
-        String tokenName = readCustomerCardUseCase.getTokenByCustomerIdAndCardId(payment.getCustomer().getId(),
-                payment.getCard().getId());
-        purchaseRequest.setToken_name(tokenName);
+        purchaseRequest.setToken_name(token);
         String signature = getSignature(purchaseRequest, payment.getMerchant_reference(), ServiceCommand.PURCHASE);
         purchaseRequest.setSignature(signature);
         payment.setRequest(purchaseRequest.toString());

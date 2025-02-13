@@ -7,5 +7,4 @@ import com.qeema.aps.payment.domain.dto.RefundResponse;
 public interface ProcessPaymentUseCase {
     PaymentResponse processPayment(PaymentRequest payment);
 
-    RefundResponse refundPayment(String merchantReference, Integer customerId);
 }

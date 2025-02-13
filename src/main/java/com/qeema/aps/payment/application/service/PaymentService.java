@@ -9,6 +9,7 @@ import com.qeema.aps.common.utils.ServiceCommand;
 import com.qeema.aps.payment.adapter.out.persistance.PaymentRepository;
 import com.qeema.aps.payment.application.port.in.PreparePaymentUseCase;
 import com.qeema.aps.payment.application.port.in.ProcessPaymentUseCase;
+import com.qeema.aps.payment.application.port.in.ProcessRefundUseCase;
 import com.qeema.aps.payment.application.port.in.ReadPaymentUseCase;
 import com.qeema.aps.payment.application.port.out.FulfillPaymentPort;
 import com.qeema.aps.payment.application.port.out.SavePaymentPort;
@@ -22,7 +23,9 @@ import com.qeema.aps.payment.domain.dto.RefundResponse;
 import com.qeema.aps.card.domain.Card;
 import com.qeema.aps.customer.domain.Customer;
 import com.qeema.aps.card.adapter.out.persistance.CardRepository;
+import com.qeema.aps.card.application.port.in.ReadCardUseCase;
 import com.qeema.aps.customer.adapter.out.persistance.CustomerRepository;
+import com.qeema.aps.customer.application.port.in.ReadCustomerUseCase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,19 +35,22 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-public class PaymentService implements ProcessPaymentUseCase, ReadPaymentUseCase, PreparePaymentUseCase {
+public class PaymentService
+        implements ProcessPaymentUseCase, ProcessRefundUseCase, ReadPaymentUseCase, PreparePaymentUseCase {
 
     private static final Integer SAR_ISO_CODE = 100;
-    @Autowired
-    private PaymentRepository paymentRepository;
+
     @Autowired
     private FulfillPaymentPort paymentPort;
     @Autowired
     private SavePaymentPort savePaymentPort;
     @Autowired
-    private CardRepository cardRepository;
+    private PaymentRepository paymentRepository;
+
     @Autowired
-    private CustomerRepository customerRepository;
+    private ReadCardUseCase readCardUseCase;
+    @Autowired
+    private ReadCustomerUseCase readCustomerUseCase;
 
     @Override
     public PaymentResponse processPayment(PaymentRequest paymentReq) {
@@ -58,9 +64,9 @@ public class PaymentService implements ProcessPaymentUseCase, ReadPaymentUseCase
         payment.setAmount(amount);
         payment.setCurrency(paymentReq.getCurrency());
         payment.setOrder_description(removeSpecialCharacters(paymentReq.getOrder_description()));
-        Card card = cardRepository.findById(paymentReq.getCard_id()).orElse(null);
+        Card card = readCardUseCase.getCard(paymentReq.getCard_id());
         payment.setCard(card);
-        Customer customer = customerRepository.findById(paymentReq.getCustomer_id()).orElse(null);
+        Customer customer = readCustomerUseCase.getCustomer(paymentReq.getCustomer_id());
         payment.setCustomer(customer);
 
         paymentRepository.save(payment);

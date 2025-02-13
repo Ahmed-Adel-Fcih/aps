@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.qeema.aps.card.adapter.out.persistance.CardRepository;
+import com.qeema.aps.card.application.port.in.ReadCardUseCase;
 import com.qeema.aps.card.domain.Card;
 import com.qeema.aps.customer.adapter.out.persistance.CustomerCardRepository;
 import com.qeema.aps.customer.adapter.out.persistance.CustomerRepository;
@@ -25,7 +26,7 @@ public class CustomerService implements ReadCustomerUseCase, ReadCustomerCardUse
     CustomerCardRepository customerCardRepository;
 
     @Autowired
-    CardRepository cardRepository;
+    ReadCardUseCase readCardUseCase;
 
     @Override
     public List<Card> getAllCustomerCards(Integer customerId) {
@@ -33,7 +34,7 @@ public class CustomerService implements ReadCustomerUseCase, ReadCustomerCardUse
         Iterable<CustomerCard> allcustomerCards = customerCardRepository.findAll();
         List<Card> cardList = new ArrayList<>();
         allcustomerCards.forEach(customerCard -> {
-            cardList.add(cardRepository.findById(customerCard.getCard().getId()).orElse(null));
+            cardList.add(readCardUseCase.getCard(customerCard.getCard().getId()));
         });
         return cardList;
     }
