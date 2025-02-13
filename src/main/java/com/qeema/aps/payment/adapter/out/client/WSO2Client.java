@@ -9,14 +9,9 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -28,7 +23,6 @@ import com.qeema.aps.common.utils.AmazonUtils;
 import com.qeema.aps.common.utils.ServiceCommand;
 import com.qeema.aps.common.utils.WSO2Utils;
 import com.qeema.aps.common.utils.WSO2Utils.AuthResponse;
-import com.qeema.aps.customer.application.port.in.ReadCustomerCardUseCase;
 import com.qeema.aps.payment.application.port.out.AmazonPaymentServiceClient;
 import com.qeema.aps.payment.domain.Payment;
 import com.qeema.aps.payment.domain.dto.PurchaseRequest;
@@ -74,12 +68,17 @@ public class WSO2Client implements AmazonPaymentServiceClient {
         payment.setRequest(purchaseRequest.toString());
         try {
             HttpHeaders headers = getAuthHeader("Oauth2");
-            HttpEntity<PurchaseRequest> entity = new HttpEntity<>(purchaseRequest, headers);
-            response = restTemplate.postForObject(PURCHASE_API_URL, entity, PurchaseResponse.class);
-        } catch (RestClientException e) {
-            log.error(e.getMessage(), e);
+            response = webClient.post()
+                    .uri(PURCHASE_API_URL)
+                    .headers(httpHeaders -> httpHeaders.addAll(headers))
+                    .body(BodyInserters.fromValue(purchaseRequest))
+                    .retrieve()
+                    .bodyToMono(PurchaseResponse.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error response from purchase API: {}", e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Error invoking purchase API", e);
         }
         return response;
     }
