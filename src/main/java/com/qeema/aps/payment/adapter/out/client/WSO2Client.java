@@ -19,6 +19,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.qeema.aps.common.utils.AmazonConstants;
 import com.qeema.aps.common.utils.AmazonUtils;
@@ -43,6 +46,8 @@ public class WSO2Client implements AmazonPaymentServiceClient {
     private static final String REFUND_API_URL = "https://localhost:8243/refund/1.0.0";
     private static final String TOKEN_API_URL = "https://localhost:9443/oauth2/token";
 
+    @Autowired
+    private WebClient webClient;
     @Autowired
     private RestTemplate restTemplate;
 
@@ -91,31 +96,30 @@ public class WSO2Client implements AmazonPaymentServiceClient {
     }
 
     private AuthResponse invokeWSO2Oauth2Request() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.set("Authorization", "Basic " + getAccessToken());
-
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type", "password");
-        body.add("username", oauthUsername);
-        body.add("password", oauthPassword);
-
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
-
-        ResponseEntity<AuthResponse> response = restTemplate.exchange(TOKEN_API_URL, HttpMethod.POST, requestEntity,
-                AuthResponse.class);
-        if (response.getStatusCode().is2xxSuccessful()) {
-            return response.getBody();
-        } else {
-            throw new RuntimeException("Failed to obtain access token: " + response.getStatusCode());
+        String accessToken = getAccessToken();
+        try {
+            return webClient.post()
+                    .uri(TOKEN_API_URL)
+                    .header(HttpHeaders.AUTHORIZATION, "Basic " + accessToken)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                    .body(BodyInserters.fromFormData("grant_type", "password")
+                            .with("username", oauthUsername)
+                            .with("password", oauthPassword))
+                    .retrieve()
+                    .bodyToMono(AuthResponse.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error response from token API: {}", e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Failed to obtain access token: " + e.getStatusCode());
+        } catch (Exception e) {
+            log.error("Error invoking token API", e);
+            throw new RuntimeException("Failed to obtain access token", e);
         }
     }
 
     private String getAccessToken() {
-        String accessToken;
         String tokenStr = oauthConsumerKey + ":" + oauthConsumerSecret;
-        accessToken = Base64.getEncoder().encodeToString(tokenStr.getBytes());
-        return accessToken;
+        return Base64.getEncoder().encodeToString(tokenStr.getBytes());
     }
 
     @Override
@@ -137,19 +141,15 @@ public class WSO2Client implements AmazonPaymentServiceClient {
         params.put("merchant_identifier", AmazonConstants.MERCHANT_IDENTIFIER);
         params.put("command", command.getName());
         params.put("language", AmazonConstants.LANGUAGE);
-        // params.put("return_url", AmazonConstants.RETURN_URL_PURCHASE);
         params.put("merchant_reference", merchant_reference);
         Set<String> excludedFields = new HashSet<>();
         excludedFields.add("access_code");
         excludedFields.add("merchant_identifier");
         excludedFields.add("command");
         excludedFields.add("language");
-        // excludedFields.add("return_url");
         excludedFields.add("merchant_reference");
         excludedFields.add("signature");
         AmazonUtils.addToMapIfNotNull(params, request, excludedFields);
-        String signature = AmazonUtils.generateSignature(params);
-        return signature;
+        return AmazonUtils.generateSignature(params);
     }
-
 }
