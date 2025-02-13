@@ -15,6 +15,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -93,12 +95,12 @@ public class WSO2Client implements AmazonPaymentServiceClient {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.set("Authorization", "Basic " + getAccessToken());
 
-        Map<String, String> body = new HashMap<>();
-        body.put("grant_type", "password");
-        body.put("username", oauthUsername);
-        body.put("password", oauthPassword);
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "password");
+        body.add("username", oauthUsername);
+        body.add("password", oauthPassword);
 
-        HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(body, headers);
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
 
         ResponseEntity<AuthResponse> response = restTemplate.exchange(TOKEN_API_URL, HttpMethod.POST, requestEntity,
                 AuthResponse.class);
