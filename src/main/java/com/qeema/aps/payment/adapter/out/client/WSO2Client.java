@@ -36,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WSO2Client implements AmazonPaymentServiceClient {
 
-    private static final String PURCHASE_API_URL = "https://localhost:8243/purchase/1.0.0";
-    private static final String REFUND_API_URL = "https://localhost:8243/refund/1.0.0";
+    private static final String PURCHASE_API_URL = "https://localhost:8243/aps/1.0.0/purchase";
+    private static final String REFUND_API_URL = "https://localhost:8243/aps/1.0.0/refund";
     private static final String TOKEN_API_URL = "https://localhost:9443/oauth2/token";
 
     @Autowired
