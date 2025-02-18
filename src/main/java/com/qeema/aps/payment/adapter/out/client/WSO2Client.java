@@ -83,15 +83,24 @@ public class WSO2Client implements AmazonPaymentServiceClient {
         return response;
     }
 
-    private HttpHeaders getAuthHeader(String authType) {
-        HttpHeaders headers = new HttpHeaders();
-        if (Objects.equals("Basic", authType)) {
-            headers.set("Internal-API-Key", internalApiKey);
-        } else if (Objects.equals("Oauth2", authType)) {
-            WSO2Utils.AuthResponse response = invokeWSO2Oauth2Request();
-            headers.set("Authorization", "Bearer " + response.getAccess_token());
+    @Override
+    public RefundResponse callRefundAPI(RefundRequest refundRequest) {
+        RefundResponse response = new RefundResponse();
+        try {
+            HttpHeaders headers = getAuthHeader("Oauth2");
+            response = webClient.post()
+                    .uri(REFUND_API_URL)
+                    .headers(httpHeaders -> httpHeaders.addAll(headers))
+                    .body(BodyInserters.fromValue(refundRequest))
+                    .retrieve()
+                    .bodyToMono(RefundResponse.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error response from refund API: {}", e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            log.error("Error invoking refund API", e);
         }
-        return headers;
+        return response;
     }
 
     private AuthResponse invokeWSO2Oauth2Request() {
@@ -116,22 +125,20 @@ public class WSO2Client implements AmazonPaymentServiceClient {
         }
     }
 
+    private HttpHeaders getAuthHeader(String authType) {
+        HttpHeaders headers = new HttpHeaders();
+        if (Objects.equals("Basic", authType)) {
+            headers.set("Internal-API-Key", internalApiKey);
+        } else if (Objects.equals("Oauth2", authType)) {
+            WSO2Utils.AuthResponse response = invokeWSO2Oauth2Request();
+            headers.set("Authorization", "Bearer " + response.getAccess_token());
+        }
+        return headers;
+    }
+
     private String getAccessToken() {
         String tokenStr = oauthConsumerKey + ":" + oauthConsumerSecret;
         return Base64.getEncoder().encodeToString(tokenStr.getBytes());
-    }
-
-    @Override
-    public RefundResponse callRefundAPI(RefundRequest refundRequest) {
-        RefundResponse response = new RefundResponse();
-        try {
-            response = restTemplate.postForObject(REFUND_API_URL, refundRequest, RefundResponse.class);
-        } catch (RestClientException e) {
-            log.error(e.getMessage(), e);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-        }
-        return response;
     }
 
     private String getSignature(PurchaseRequest request, String merchant_reference, ServiceCommand command) {

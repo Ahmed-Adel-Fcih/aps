@@ -74,8 +74,13 @@ public class PaymentAdapter implements FulfillPaymentPort, SavePaymentPort {
     }
 
     @Override
+    public RefundResponse callRefundAPI(RefundRequest refundRequest) {
+        return wso2Client.callRefundAPI(refundRequest);
+    }
+
+    @Override
     public void savePayment(Payment payment) {
-        throw new UnsupportedOperationException("Unimplemented method 'savePayment'");
+        paymentRepository.save(payment);
     }
 
     @Override
@@ -91,11 +96,6 @@ public class PaymentAdapter implements FulfillPaymentPort, SavePaymentPort {
         payment.setMerchant_reference(merchant_reference);
         log.info(payment.toString());
         paymentRepository.save(payment);
-    }
-
-    @Override
-    public RefundResponse callRefundAPI(RefundRequest refundRequest) {
-        return amazonClient.callRefundAPI(refundRequest);
     }
 
 }
